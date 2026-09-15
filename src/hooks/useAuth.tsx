@@ -23,9 +23,10 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const isDemo = getActiveBackendMode() === "demo";
+  const [user, setUser] = useState<User | null>(isDemo ? demoUser : null);
+  const [session, setSession] = useState<Session | null>(isDemo ? demoSession : null);
+  const [loading, setLoading] = useState(!isDemo);
 
   useEffect(() => {
     const provider = getActiveDataProvider();

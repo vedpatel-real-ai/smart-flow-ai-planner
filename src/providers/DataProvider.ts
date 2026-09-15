@@ -1,34 +1,77 @@
 import { createContext, createElement, ReactNode, useContext, useEffect, useState } from "react";
 import { DemoProvider } from "./DemoProvider";
 import { canUseSupabase, SupabaseProvider } from "./SupabaseProvider";
+import { isSupabaseConfigured } from "@/integrations/supabase/client";
 
-type BackendMode = "checking" | "supabase" | "demo";
+type BackendMode = "supabase" | "demo";
 
-const DataProviderContext = createContext({
-  mode: "checking" as BackendMode,
-  isDemoMode: false,
-});
+const STORAGE_MODE_KEY = "smart-taskflow-backend-mode";
 
-let activeProvider: typeof DemoProvider | typeof SupabaseProvider = DemoProvider;
-let activeMode: Exclude<BackendMode, "checking"> = "demo";
+const getInitialMode = (): BackendMode => {
+  if (!isSupabaseConfigured) {
+    return "demo";
+  }
+  const stored = localStorage.getItem(STORAGE_MODE_KEY);
+  if (stored === "supabase" || stored === "demo") {
+    return stored;
+  }
+  return "demo";
+};
+
+let activeMode: BackendMode = getInitialMode();
+let activeProvider: typeof DemoProvider | typeof SupabaseProvider =
+  activeMode === "supabase" ? SupabaseProvider : DemoProvider;
 
 export const getActiveDataProvider = () => activeProvider;
 export const getActiveBackendMode = () => activeMode;
+
 export const forceDemoMode = () => {
   activeProvider = DemoProvider;
   activeMode = "demo";
+  localStorage.setItem(STORAGE_MODE_KEY, "demo");
 };
 
+interface DataContextType {
+  mode: BackendMode;
+  isDemoMode: boolean;
+  setMode: (mode: BackendMode) => void;
+}
+
+const DataProviderContext = createContext<DataContextType>({
+  mode: "demo",
+  isDemoMode: true,
+  setMode: () => undefined,
+});
+
 export const DataProvider = ({ children }: { children: ReactNode }) => {
-  const [mode, setMode] = useState<BackendMode>("checking");
+  const [mode, setModeState] = useState<BackendMode>(activeMode);
+
+  const setMode = (newMode: BackendMode) => {
+    activeMode = newMode;
+    activeProvider = newMode === "supabase" ? SupabaseProvider : DemoProvider;
+    localStorage.setItem(STORAGE_MODE_KEY, newMode);
+    setModeState(newMode);
+  };
 
   useEffect(() => {
     let mounted = true;
 
+    if (!isSupabaseConfigured) {
+      if (activeMode !== "demo") {
+        setMode("demo");
+      }
+      return;
+    }
+
     canUseSupabase().then((available) => {
-      activeProvider = available ? SupabaseProvider : DemoProvider;
-      activeMode = available ? "supabase" : "demo";
-      if (mounted) setMode(activeMode);
+      if (!mounted) return;
+      if (available && activeMode === "supabase") {
+        activeProvider = SupabaseProvider;
+        setModeState("supabase");
+      } else if (!available && activeMode === "supabase") {
+        // Fallback to demo mode if configured Supabase is unreachable
+        setMode("demo");
+      }
     });
 
     return () => {
@@ -38,10 +81,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   return createElement(
     DataProviderContext.Provider,
-    { value: { mode, isDemoMode: mode === "demo" } },
-    mode === "checking"
-      ? createElement("div", { className: "min-h-screen flex items-center justify-center" }, "Loading...")
-      : children
+    { value: { mode, isDemoMode: mode === "demo", setMode } },
+    children
   );
 };
 

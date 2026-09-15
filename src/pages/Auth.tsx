@@ -109,6 +109,15 @@ const Auth = () => {
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Signing In..." : "Sign In"}
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => signIn("demo@example.com", "demopassword")}
+                    disabled={loading}
+                  >
+                    Explore Demo Mode Instantly
+                  </Button>
                 </form>
               </TabsContent>
               
