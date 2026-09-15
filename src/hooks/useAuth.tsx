@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { demoSession, demoUser } from "@/demo/auth";
-import { forceDemoMode, getActiveDataProvider, getActiveBackendMode } from "@/providers/DataProvider";
+import { forceDemoMode, getActiveDataProvider } from "@/providers/DataProvider";
 
 interface AuthContextType {
   user: User | null;
@@ -23,48 +23,50 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const isDemo = getActiveBackendMode() === "demo";
-  const [user, setUser] = useState<User | null>(isDemo ? demoUser : null);
-  const [session, setSession] = useState<Session | null>(isDemo ? demoSession : null);
-  const [loading, setLoading] = useState(!isDemo);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const provider = getActiveDataProvider();
-    const authenticateDemoUser = () => {
-      forceDemoMode();
-      setSession(demoSession);
-      setUser(demoUser);
-      setLoading(false);
-    };
 
     const { data: { subscription } } = provider.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session || demoSession);
-        setUser(session?.user ?? demoUser);
+      (_event, currentSession) => {
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
         setLoading(false);
       }
     );
 
     provider.auth.getSession()
-      .then(({ data: { session } }) => {
-        setSession(session || demoSession);
-        setUser(session?.user ?? demoUser);
+      .then(({ data: { session: initialSession } }) => {
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
         setLoading(false);
       })
-      .catch(authenticateDemoUser);
+      .catch(() => {
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await getActiveDataProvider().auth.signInWithPassword({ email, password });
+      const { error, data } = await getActiveDataProvider().auth.signInWithPassword({ email, password });
       if (error) throw error;
+      if (data?.session) {
+        setSession(data.session);
+        setUser(data.user);
+      }
       return { error: null };
     } catch {
       forceDemoMode();
-      setSession(demoSession);
-      setUser(demoUser);
+      const { data } = await getActiveDataProvider().auth.signInWithPassword({ email, password });
+      setSession(data?.session || demoSession);
+      setUser(data?.user || demoUser);
       return { error: null };
     }
   };
@@ -73,7 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const redirectUrl = `${window.location.origin}/`;
     
     try {
-      const { error } = await getActiveDataProvider().auth.signUp({
+      const { error, data } = await getActiveDataProvider().auth.signUp({
         email,
         password,
         options: {
@@ -84,19 +86,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
       });
       if (error) throw error;
+      if (data?.session) {
+        setSession(data.session);
+        setUser(data.user);
+      }
       return { error: null };
     } catch {
       forceDemoMode();
-      setSession(demoSession);
-      setUser(demoUser);
+      const { data } = await getActiveDataProvider().auth.signUp({ email, password });
+      setSession(data?.session || demoSession);
+      setUser(data?.user || demoUser);
       return { error: null };
     }
   };
 
   const signOut = async () => {
     await getActiveDataProvider().auth.signOut();
-    setSession(demoSession);
-    setUser(demoUser);
+    setSession(null);
+    setUser(null);
   };
 
   const value = {

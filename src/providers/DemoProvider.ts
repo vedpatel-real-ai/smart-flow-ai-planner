@@ -184,26 +184,74 @@ const scoreTask = (priority?: string) => {
   return 3;
 };
 
+const authListeners = new Set<(event: string, session: any) => void>();
+
+const isDemoAuthenticated = () => {
+  try {
+    return localStorage.getItem("smart-taskflow-demo-authenticated") === "true";
+  } catch {
+    return false;
+  }
+};
+
+const demoSessionFromStorage = () => {
+  if (!isDemoAuthenticated()) {
+    return null;
+  }
+  return {
+    access_token: "demo-access-token",
+    refresh_token: "demo-refresh-token",
+    expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    token_type: "bearer",
+    user: demoUser,
+  };
+};
+
+const notifyAuthChange = (event: string, session: any) => {
+  authListeners.forEach((listener) => {
+    try {
+      listener(event, session);
+    } catch {}
+  });
+};
+
 export const DemoProvider = {
   mode: "demo" as const,
   auth: {
     async getSession() {
-      return { data: { session: demoSessionFromStorage() }, error: null };
+      const session = demoSessionFromStorage();
+      return { data: { session }, error: null };
     },
     onAuthStateChange(callback: (_event: string, session: any) => void) {
-      window.setTimeout(() => callback("SIGNED_IN", demoSessionFromStorage()), 0);
-      return { data: { subscription: { unsubscribe: () => undefined } } };
+      authListeners.add(callback);
+      const session = demoSessionFromStorage();
+      window.setTimeout(() => callback(session ? "SIGNED_IN" : "SIGNED_OUT", session), 0);
+      return {
+        data: {
+          subscription: {
+            unsubscribe: () => {
+              authListeners.delete(callback);
+            },
+          },
+        },
+      };
     },
     async signInWithPassword() {
       localStorage.setItem("smart-taskflow-demo-authenticated", "true");
-      return { data: { user: demoUser, session: demoSessionFromStorage() }, error: null };
+      const session = demoSessionFromStorage();
+      notifyAuthChange("SIGNED_IN", session);
+      return { data: { user: demoUser, session }, error: null };
     },
     async signUp() {
       localStorage.setItem("smart-taskflow-demo-authenticated", "true");
-      return { data: { user: demoUser, session: demoSessionFromStorage() }, error: null };
+      const session = demoSessionFromStorage();
+      notifyAuthChange("SIGNED_IN", session);
+      return { data: { user: demoUser, session }, error: null };
     },
     async signOut() {
       localStorage.removeItem("smart-taskflow-demo-authenticated");
+      notifyAuthChange("SIGNED_OUT", null);
       return { error: null };
     },
   },
@@ -211,12 +259,3 @@ export const DemoProvider = {
     return new DemoQueryBuilder(table);
   },
 };
-
-const demoSessionFromStorage = () => ({
-  access_token: "demo-access-token",
-  refresh_token: "demo-refresh-token",
-  expires_in: 3600,
-  expires_at: Math.floor(Date.now() / 1000) + 3600,
-  token_type: "bearer",
-  user: demoUser,
-});

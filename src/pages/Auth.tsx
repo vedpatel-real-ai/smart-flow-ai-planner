@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Brain, CheckCircle } from "lucide-react";
+import { Brain, CheckCircle, Sparkles } from "lucide-react";
 
 const Auth = () => {
   const { signIn, signUp } = useAuth();
@@ -59,6 +59,12 @@ const Auth = () => {
     setLoading(false);
   };
 
+  const handleDemoAccess = async () => {
+    setLoading(true);
+    await signIn("demo@example.com", "demopassword");
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-secondary/20 p-4">
       <div className="w-full max-w-md">
@@ -70,21 +76,21 @@ const Auth = () => {
           <p className="text-muted-foreground mt-2">AI-Powered Productivity System</p>
         </div>
 
-        <Card>
+        <Card className="shadow-lg border-primary/10">
           <CardHeader>
             <CardTitle>Welcome</CardTitle>
             <CardDescription>
-              Sign in to your account or create a new one to get started
+              Sign in to your account, create a new one, or enter Demo Mode
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Tabs defaultValue="signin" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="signin">
+              <TabsContent value="signin" className="pt-2">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signin-email">Email</Label>
@@ -109,19 +115,10 @@ const Auth = () => {
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? "Signing In..." : "Sign In"}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => signIn("demo@example.com", "demopassword")}
-                    disabled={loading}
-                  >
-                    Explore Demo Mode Instantly
-                  </Button>
                 </form>
               </TabsContent>
               
-              <TabsContent value="signup">
+              <TabsContent value="signup" className="pt-2">
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signup-name">Display Name</Label>
@@ -158,6 +155,26 @@ const Auth = () => {
                 </form>
               </TabsContent>
             </Tabs>
+
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or explore instantly</span>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full border-primary/20 hover:border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary font-medium flex items-center justify-center gap-2 py-5"
+              onClick={handleDemoAccess}
+              disabled={loading}
+            >
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span>Explore in Demo Mode (No Login Required)</span>
+            </Button>
           </CardContent>
         </Card>
 
@@ -172,6 +189,7 @@ const Auth = () => {
               <span>Smart Scheduling</span>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground mt-4">Smart TaskFlow • Developed by Ved Patel</p>
         </div>
       </div>
     </div>
