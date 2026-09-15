@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { demoSession, demoUser } from "@/demo/auth";
-import { forceDemoMode, getActiveDataProvider } from "@/providers/DataProvider";
+import { forceDemoMode, getActiveDataProvider, getActiveBackendMode } from "@/providers/DataProvider";
 
 interface AuthContextType {
   user: User | null;
