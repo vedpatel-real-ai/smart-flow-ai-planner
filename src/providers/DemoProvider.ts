@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { bookedInterval, overlaps } from "../domain/calendar";
-import { demoTasks } from "../demo/tasks";
-import { demoTaskCompletions } from "../demo/analytics";
-import { demoCategories, demoUserPreferences } from "../demo/settings";
+import { createDemoWorkspace } from "../demo/fixtures";
 import { demoUserProfile } from "../demo/users";
 import type { Category, Task, TaskCompletion, UserPreferences } from "../types/database";
 import { scoreTask } from "../../supabase/functions/_shared/scoring";
@@ -83,42 +81,52 @@ function upgrade(store: Store) {
 }
 
 function seeded(): Store {
-  const store: Store = structuredClone({
-    version: 2,
-    tasks: demoTasks,
-    categories: demoCategories,
-    task_completions: demoTaskCompletions,
-    user_preferences: [demoUserPreferences],
-    receipts: {},
-  });
-  upgrade(store);
+  const store: Store = structuredClone(createDemoWorkspace());
+  // Re-rank with live clock so scores reflect the actual current time
+  rank(store.tasks);
   return store;
 }
 
 function read(storage: Storage): { store: Store; migrated: boolean } {
   const raw = storage.getItem(demoStoreKey);
   if (raw === null) return { store: seeded(), migrated: true };
-  const parsed = storedSchema.safeParse(JSON.parse(raw));
-  if (!parsed.success) {
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("This local workspace contains invalid data. Your saved data has been preserved. Use Export to back it up, then Reset Demo to start fresh.");
+  }
+  const result = storedSchema.safeParse(parsed);
+  if (!result.success) {
     throw new Error("This local workspace could not be read. Your saved data has been preserved.");
   }
-  const store = { ...parsed.data, version: 2 } as Store;
+  const store = { ...result.data, version: 2 } as Store;
   if (
     [...store.tasks, ...store.categories, ...store.task_completions, ...store.user_preferences].some((row) =>
       row.user_id !== owner
     ) ||
     store.user_preferences.length !== 1
   ) throw new Error("Invalid local workspace ownership or preferences.");
-  if (!parsed.data.version) upgrade(store);
-  return { store, migrated: !parsed.data.version };
+  if (!result.data.version) upgrade(store);
+  return { store, migrated: !result.data.version };
 }
 
 type Exclusive = <T>(fn: () => T) => Promise<T>;
+
 const browserLock: Exclusive = async (fn) => {
-  if (!globalThis.navigator?.locks) {
-    throw new Error("Demo storage requires a secure browser with Web Locks support.");
+  if (globalThis.navigator?.locks) {
+    return navigator.locks.request(demoStoreKey, fn);
   }
-  return navigator.locks.request(demoStoreKey, fn);
+  // Web Locks unavailable (insecure origin or unsupported browser).
+  // Fall back to tab-local sequential execution. This does NOT provide
+  // cross-tab synchronization — only single-tab crash prevention.
+  if (typeof console !== "undefined") {
+    console.warn(
+      "[DemoProvider] Web Locks unavailable in this environment (insecure origin or unsupported browser). " +
+      "Cross-tab coordination is disabled; writes are serialized within this tab only."
+    );
+  }
+  return fn();
 };
 
 export async function resetDemo(storage = localStorage, exclusive: Exclusive = browserLock) {

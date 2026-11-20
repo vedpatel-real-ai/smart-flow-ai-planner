@@ -28,7 +28,7 @@ npm ci
 npm run dev
 ```
 
-Open [the development app](http://localhost:8080) and choose **Explore Demo**. Use `npm run build` for the production bundle and `npm run preview` to serve it locally. [Development guide](docs/guides/DEVELOPMENT.md)
+Open [the development app](http://localhost:8080) and choose **Explore Demo**. Use `npm run build` for the production bundle and `npm run preview` to serve it locally. [Development guide](docs/guides/DEVELOPMENT.md) · [Demo workspace guide](docs/guides/DEMO_WORKSPACE.md)
 
 ## How it works
 
@@ -46,7 +46,7 @@ React and TypeScript implement the workspace and forms. Radix UI provides dialog
 
 ## Demo and cloud workspaces
 
-**Demo** opens with sample tasks. Changes and the demo-entry flag survive a browser restart. Signing out keeps the sample workspace on that browser profile. **Reset demo** asks for confirmation before replacing it with the original sample. Clearing site data also clears the workspace. Demo access uses no credentials.
+**Demo** opens with a rich, realistic productivity workspace (48 synthetic tasks across 6 categories, multi-week completion history, active 5-day streak, scheduled working blocks, and explainable recommendations). All metrics and charts are dynamically computed from underlying records. Changes and the demo-entry flag survive a browser restart in `localStorage` version 2 with Web Locks concurrency protection on secure origins (with a single-tab fallback queue on unsupported contexts). Signing out keeps the sample workspace on that browser profile. **Reset demo** asks for confirmation before replacing it with a freshly anchored sample. An error boundary provides data export and reset recovery options. Clearing site data also clears the workspace. Demo access uses no credentials. [Demo workspace guide](docs/guides/DEMO_WORKSPACE.md)
 
 **Cloud** requires `VITE_SUPABASE_URL` and a public `VITE_SUPABASE_PUBLISHABLE_KEY` or legacy anon key at build time. Sign in or register through the cloud form. The database migrations, Auth configuration and `task-priority` function must be available before inviting users. Local development uses a disposable Supabase project. [Deployment and upgrade guide](docs/guides/DEPLOYMENT.md)
 
@@ -82,12 +82,13 @@ Supabase authenticates cloud sessions. Row policies limit visibility, owner-qual
 
 | Location | Purpose |
 |---|---|
-| [src/components](src/components) | Workspace views and interaction controls |
-| [src/auth](src/auth) and [src/providers](src/providers) | Identity lifecycle, typed service and adapters |
-| [src/domain](src/domain) | Calendar and analytics rules |
+| [src/components](src/components) | Workspace views, dashboard overview, error boundaries and interaction controls |
+| [src/demo](src/demo) | Deterministic synthetic workspace generator and fixture definitions |
+| [src/auth](src/auth) and [src/providers](src/providers) | Identity lifecycle, typed service and adapters (Web Locks local store & Supabase) |
+| [src/domain](src/domain) | Calendar, scheduling, metrics and analytics rules |
 | [supabase](supabase) | SQL migrations and ranking function |
-| [tests](tests) | Domain, adapter, database and browser regression suites |
-| [docs](docs) | Architecture, setup and verification |
+| [tests](tests) | Domain, adapter, database, fixture and browser regression suites |
+| [docs](docs) | Architecture, guides, setup and verification |
 
 ## Limitations and troubleshooting
 
