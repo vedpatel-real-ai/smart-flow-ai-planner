@@ -15,7 +15,7 @@ interface Props {
 
 export default function TaskCard({ task, status, busy, onEdit, onComplete, onDelete }: Props) {
   return (
-    <Card>
+    <Card className="border-l-4 shadow-none" style={{ borderLeftColor: task.category?.color ?? "hsl(var(--border))" }}>
       <CardContent className="flex flex-wrap items-start justify-between gap-3 p-4">
         <div className="min-w-0 flex-1 basis-60 space-y-2 break-words">
           <div className="flex flex-wrap items-center gap-2">
@@ -40,7 +40,7 @@ export default function TaskCard({ task, status, busy, onEdit, onComplete, onDel
             {task.category && <span>{task.category.name}</span>}
             {task.series_id && <span>Series occurrence {(task.occurrence_index ?? 0) + 1}</span>}
           </div>
-          {!!task.tags?.length && <p className="text-sm">{task.tags.join(" · ")}</p>}
+          {!!task.tags?.length && <p className="flex flex-wrap gap-1 text-xs text-muted-foreground">{task.tags.map((tag, i) => <span className="rounded bg-muted px-2 py-1" key={i}>{tag}</span>)}</p>}
         </div>
         <div className="flex flex-wrap gap-1">
           {status !== "Completed" && (

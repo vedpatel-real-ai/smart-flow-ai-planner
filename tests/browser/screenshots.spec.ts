@@ -12,6 +12,7 @@ test("capture real application screens from a fresh demo profile", async ({ page
     await page.screenshot({ path, animations: "disabled" });
     await testInfo.attach(name, { path, contentType: "image/png" });
   };
+  await page.clock.setFixedTime(new Date("2026-11-19T09:30:00Z"));
   await page.goto("/");
   await expect(page.getByRole("button", { name: "Explore Demo" })).toBeVisible();
   await capture("entry");

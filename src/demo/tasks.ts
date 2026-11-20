@@ -1,93 +1,12 @@
-import { Task } from "@/types/database";
+/**
+ * Demo tasks — re-exported from the atomic fixture generator.
+ *
+ * DemoProvider.ts calls createDemoWorkspace() once and uses the full store.
+ * This module is kept for backward compatibility with any imports that
+ * reference demoTasks directly (e.g. legacy tests).
+ */
+import type { Task } from "@/types/database";
+import { createDemoWorkspace } from "./fixtures";
 
-const now = new Date();
-const isoAt = (days: number, hour: number) => {
-  const date = new Date(now);
-  date.setDate(now.getDate() + days);
-  date.setHours(hour, 0, 0, 0);
-  return date.toISOString();
-};
-
-export const demoTasks: Task[] = [
-  {
-    id: "demo-task-product-roadmap",
-    user_id: "demo-user-ved-patel",
-    title: "Review the release plan",
-    description: "Review the milestones and document architecture decisions.",
-    due_date: isoAt(0, 10),
-    priority_level: "Critical",
-    category_id: "demo-category-product",
-    tags: ["release", "architecture"],
-    is_recurring: false,
-    status: "Pending",
-    estimated_duration: 90,
-    ai_priority_score: 9.7,
-    created_at: isoAt(-5, 9),
-    updated_at: isoAt(-1, 16),
-  },
-  {
-    id: "demo-task-supabase-notes",
-    user_id: "demo-user-ved-patel",
-    title: "Write Supabase reconnection notes",
-    description: "Capture env setup and schema expectations for production mode.",
-    due_date: isoAt(1, 14),
-    priority_level: "High",
-    category_id: "demo-category-engineering",
-    tags: ["supabase", "docs"],
-    is_recurring: false,
-    status: "Pending",
-    estimated_duration: 60,
-    ai_priority_score: 8.4,
-    created_at: isoAt(-3, 12),
-    updated_at: isoAt(-1, 12),
-  },
-  {
-    id: "demo-task-standup",
-    user_id: "demo-user-ved-patel",
-    title: "Product sync and priorities",
-    description: "Review blockers, metrics, and next release scope.",
-    due_date: isoAt(0, 9),
-    priority_level: "Medium",
-    category_id: "demo-category-meetings",
-    tags: ["meeting"],
-    is_recurring: false,
-    status: "Pending",
-    estimated_duration: 30,
-    ai_priority_score: 6.8,
-    created_at: isoAt(-7, 9),
-    updated_at: isoAt(-1, 9),
-  },
-  {
-    id: "demo-task-analytics",
-    user_id: "demo-user-ved-patel",
-    title: "Review productivity analytics",
-    description: "Check weekly completion trends and rebalance tasks.",
-    due_date: isoAt(-1, 15),
-    priority_level: "Medium",
-    category_id: "demo-category-ops",
-    tags: ["analytics"],
-    is_recurring: false,
-    status: "Completed",
-    completed_at: isoAt(-1, 16),
-    estimated_duration: 45,
-    ai_priority_score: 5.9,
-    created_at: isoAt(-6, 10),
-    updated_at: isoAt(-1, 16),
-  },
-  {
-    id: "demo-task-followups",
-    user_id: "demo-user-ved-patel",
-    title: "Follow up with project partners",
-    description: "Send the weekly project update.",
-    due_date: isoAt(-2, 11),
-    priority_level: "High",
-    category_id: "demo-category-career",
-    tags: ["career", "email"],
-    is_recurring: false,
-    status: "Overdue",
-    estimated_duration: 40,
-    ai_priority_score: 8.9,
-    created_at: isoAt(-4, 11),
-    updated_at: isoAt(-2, 11),
-  },
-];
+const _workspace = createDemoWorkspace();
+export const demoTasks: Task[] = _workspace.tasks;

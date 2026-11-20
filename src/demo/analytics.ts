@@ -1,14 +1,11 @@
+/**
+ * Demo completion events — re-exported from the atomic fixture generator.
+ *
+ * DemoProvider.ts uses the full store from createDemoWorkspace().
+ * This module exists for backward compatibility with direct imports.
+ */
 import type { TaskCompletion } from "../types/database";
-import { demoTasks } from "./tasks";
+import { createDemoWorkspace } from "./fixtures";
 
-export const demoTaskCompletions: TaskCompletion[] = demoTasks.flatMap((task) => {
-  if (task.status !== "Completed" || !task.completed_at) return [];
-  return [{
-    id: "demo-completion-analytics",
-    user_id: task.user_id,
-    task_id: task.id,
-    completed_at: task.completed_at,
-    completion_date: task.completed_at.slice(0, 10),
-    actual_duration: 42,
-  }];
-});
+const _workspace = createDemoWorkspace();
+export const demoTaskCompletions: TaskCompletion[] = _workspace.task_completions;

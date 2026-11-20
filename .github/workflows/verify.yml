@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
+      # Use the pinned CLI's upstream images. The public ECR mirror rate-limited the verification runner.
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: docker.io
       PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - uses: actions/checkout@v4

@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { DataProvider } from "@/providers/DataProvider";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Layout from "./components/Layout";
@@ -16,8 +17,16 @@ function AppRoutes() {
     <Route path="/" element={<Dashboard />} /><Route path="*" element={<NotFound />}/>
   </Routes></DataProvider></Layout>;
 }
+
+function AppWithErrorBoundary() {
+  const { mode } = useAuth();
+  return <ErrorBoundary mode={mode}>
+    <AppRoutes />
+  </ErrorBoundary>;
+}
+
 export default function App() {
   return <AuthProvider><TooltipProvider><Toaster/><Sonner/><BrowserRouter>
-    <AppRoutes/>
+    <AppWithErrorBoundary/>
   </BrowserRouter></TooltipProvider></AuthProvider>;
 }

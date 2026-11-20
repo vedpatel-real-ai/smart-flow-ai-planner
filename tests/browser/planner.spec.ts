@@ -110,6 +110,16 @@ test("keyboard scheduling uses selected date, rejects overlapping durations and 
   });
   await expect(page.getByRole("button", { name: "Reschedule Planner backlog" })).toBeVisible();
   await expect(schedule).toHaveCount(0);
+  const saved = await rows(page, "Planner ");
+  await page.getByRole("button", { name: "Reschedule Planner backlog" }).click();
+  await input.fill("2034-05-03T01:00");
+  await dialog.getByRole("button", { name: "Save placement" }).click();
+  await expect(page.getByText("This time overlaps “Planner overnight”. Choose another start.", {exact:true})).toBeVisible();
+  expect(await rows(page, "Planner ")).toEqual(saved);
+  await input.fill("2034-05-03T02:30");
+  await dialog.getByRole("button", {name:"Save placement"}).click();
+  await expect(dialog).toBeHidden();
+  expect((await rows(page, "Planner backlog"))[0].scheduled_start).toBe("2034-05-02T21:00:00.000Z");
 });
 
 test("a mouse drop places a task in the chosen working hour", async ({ page }) => {

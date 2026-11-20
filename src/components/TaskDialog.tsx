@@ -21,11 +21,12 @@ const selectClass = "h-10 w-full rounded-md border bg-background px-3 text-sm";
 
 interface Props {
   task: Task | null;
+  initialPlannedStart?: string;
   onClose: () => void;
   restoreFocus: () => void;
 }
 
-export default function TaskDialog({ task, onClose, restoreFocus }: Props) {
+export default function TaskDialog({ task, initialPlannedStart, onClose, restoreFocus }: Props) {
   const { categories, service } = useWorkspace();
   const { user } = useAuth();
   const { run, busy } = usePlannerAction();
@@ -165,7 +166,7 @@ export default function TaskDialog({ task, onClose, restoreFocus }: Props) {
                   id="scheduled_start"
                   name="start"
                   type="datetime-local"
-                  defaultValue={localInput(task?.scheduled_start)}
+                  defaultValue={task ? localInput(task.scheduled_start) : initialPlannedStart}
                 />
               </div>
             </>

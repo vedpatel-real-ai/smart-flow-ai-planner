@@ -35,7 +35,7 @@ function TaskPlacement(
   });
   const interval = bookedInterval(task);
   return (
-    <li className="flex flex-wrap items-center gap-2 rounded-md border p-2">
+    <li className="flex flex-wrap items-center gap-2 rounded-lg border border-l-4 p-2" style={{ borderLeftColor: task.category?.color ?? "hsl(var(--primary))" }}>
       <button
         ref={setNodeRef}
         {...listeners}
@@ -79,7 +79,7 @@ function DropSlot({ start, end, tasks }: { start: number; end: number; tasks: Ta
     <li
       ref={setNodeRef}
       className={`min-h-12 rounded-md border border-dashed p-2 text-sm ${
-        isOver ? "border-primary bg-primary/10" : ""
+        isOver ? "border-primary bg-primary/10" : names.length ? "border-solid bg-secondary" : ""
       }`}
     >
       <span className="font-medium">
