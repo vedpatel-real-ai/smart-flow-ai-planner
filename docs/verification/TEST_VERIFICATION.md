@@ -2,6 +2,8 @@
 
 Use the commit and run ID to identify a result. GitHub tests the checked-out merge revision on pull requests and the branch revision on pushes. The workflow records both the checkout SHA and available PR head SHA. A later documentation commit can refer to an earlier tested SHA without embedding a self-referential hash.
 
+[Issue-by-issue acceptance and local evidence](ACCEPTANCE.md)
+
 ## Reproduce locally
 
 Use Node 24, Deno 2.9.6, Python 3 and Docker. Use a full Git clone because database upgrade tests read both original SQL files from commit `fda439e2e94c502890c2600e14e7c927670fdc57`. Run the following from the repository root.

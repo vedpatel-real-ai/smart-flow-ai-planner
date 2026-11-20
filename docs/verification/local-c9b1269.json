@@ -1,0 +1,100 @@
+{
+  "commit": "c9b126964cd5dfcf970bbdedc6aa1b068e5055f0",
+  "created": "2026-11-20T19:10:13.881440+00:00",
+  "working_tree_clean": true,
+  "runner": "macOS-27.0-arm64-arm-64bit-Mach-O",
+  "node": "v26.7.0",
+  "npm": "11.19.0",
+  "deno": "deno 2.9.6 (stable, release, aarch64-apple-darwin)",
+  "pull_request_head": null,
+  "run_id": null,
+  "gates": [
+    {
+      "gate": "browser",
+      "started": "2026-11-20T19:09:43.990086+00:00",
+      "finished": "2026-11-20T19:10:10.129287+00:00",
+      "exit": 0
+    },
+    {
+      "gate": "build",
+      "started": "2026-11-20T19:09:39.842512+00:00",
+      "finished": "2026-11-20T19:09:45.663782+00:00",
+      "exit": 0
+    },
+    {
+      "gate": "database",
+      "started": "2026-11-20T19:09:42.687748+00:00",
+      "finished": "2026-11-20T19:09:54.619204+00:00",
+      "exit": 0
+    },
+    {
+      "gate": "edge-types",
+      "started": "2026-11-20T19:09:39.842891+00:00",
+      "finished": "2026-11-20T19:09:41.657875+00:00",
+      "exit": 0
+    },
+    {
+      "gate": "edge",
+      "started": "2026-11-20T19:09:39.844411+00:00",
+      "finished": "2026-11-20T19:09:42.047649+00:00",
+      "exit": 0
+    },
+    {
+      "gate": "install",
+      "started": "2026-11-20T19:09:19.766421+00:00",
+      "finished": "2026-11-20T19:09:28.464215+00:00",
+      "exit": 0
+    },
+    {
+      "gate": "integration",
+      "started": "2026-11-20T19:09:44.231244+00:00",
+      "finished": "2026-11-20T19:09:51.827796+00:00",
+      "exit": 0
+    },
+    {
+      "gate": "lint",
+      "started": "2026-11-20T19:09:39.843332+00:00",
+      "finished": "2026-11-20T19:09:43.015366+00:00",
+      "exit": 0
+    },
+    {
+      "gate": "types",
+      "started": "2026-11-20T19:09:39.842548+00:00",
+      "finished": "2026-11-20T19:09:46.999376+00:00",
+      "exit": 0
+    },
+    {
+      "gate": "unit",
+      "started": "2026-11-20T19:09:39.845065+00:00",
+      "finished": "2026-11-20T19:09:41.887219+00:00",
+      "exit": 0
+    }
+  ],
+  "suites": {
+    "browser": {
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0
+    },
+    "database": {
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0
+    },
+    "edge": {
+      "passed": 18,
+      "failed": 0,
+      "skipped": 0
+    },
+    "integration": {
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0
+    },
+    "unit": {
+      "passed": 46,
+      "failed": 0,
+      "skipped": 0
+    }
+  }
+}
