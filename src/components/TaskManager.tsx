@@ -50,7 +50,7 @@ export default function TaskManager() {
   };
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="rounded-t-lg border-b bg-primary/5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <CardTitle>Task Manager</CardTitle>
@@ -78,7 +78,7 @@ export default function TaskManager() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 pt-5">
         <Input
           aria-label="Search tasks"
           type="search"
@@ -99,6 +99,7 @@ export default function TaskManager() {
             </Button>
           ))}
         </div>
+        <p role="status" className="text-sm text-muted-foreground">{filtered.length} of {tasks.length} tasks</p>
         {filtered.length === 0 && (
           <p>{tasks.length ? "No tasks match your filters." : "No tasks yet."}</p>
         )}

@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle } from "lucide-react";
 
+import DemoStorageControls from "./DemoStorageControls";
+
 interface Props {
   children: ReactNode;
   mode?: "demo" | "cloud" | null;
@@ -36,37 +38,6 @@ export class ErrorBoundary extends Component<Props, State> {
     window.location.reload();
   };
 
-  private handleExport = () => {
-    try {
-      const raw = localStorage.getItem("smart-taskflow-demo-store");
-      if (!raw) {
-        alert("No demo workspace data found in this browser.");
-        return;
-      }
-      const blob = new Blob([raw], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `smart-flow-demo-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      alert("Could not export workspace data.");
-    }
-  };
-
-  private handleReset = () => {
-    if (!window.confirm("Replace all tasks in this browser's demo workspace with the original sample data? Your current demo changes will be lost.")) {
-      return;
-    }
-    try {
-      localStorage.removeItem("smart-taskflow-demo-store");
-      window.location.reload();
-    } catch {
-      alert("Could not reset the demo workspace. Try clearing site data manually.");
-    }
-  };
-
   render() {
     if (!this.state.error) return this.props.children;
 
@@ -78,7 +49,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <CardHeader>
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" aria-hidden="true" />
-              <CardTitle>Something went wrong</CardTitle>
+              <CardTitle role="alert">Something went wrong</CardTitle>
             </div>
             <CardDescription>
               An unexpected error occurred while loading this view. Your data has not been modified.
@@ -93,12 +64,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </details>
             <div className="flex flex-wrap gap-2">
               <Button onClick={this.handleReload}>Reload page</Button>
-              {isDemo && (
-                <>
-                  <Button variant="outline" onClick={this.handleExport}>Export saved data</Button>
-                  <Button variant="outline" onClick={this.handleReset}>Reset demo workspace</Button>
-                </>
-              )}
+              {isDemo && <DemoStorageControls />}
             </div>
           </CardContent>
         </Card>

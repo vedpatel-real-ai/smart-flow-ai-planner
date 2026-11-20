@@ -1,3 +1,7 @@
+import { useRef, useState } from "react";
+import TaskDialog from "./TaskDialog";
+import StatCard from "./StatCard";
+import WeeklyActivity from "./WeeklyActivity";
 import { useWorkspace } from "@/providers/DataProvider";
 import { metrics } from "@/domain/metrics";
 import { plannerLists, calendarDay } from "@/domain/calendar";
@@ -6,13 +10,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import AIRecommendations from "./AIRecommendations";
-import { CheckCircle2, Clock, CalendarCheck, TrendingUp, Flame, ArrowRight } from "lucide-react";
+import { CheckCircle2, Clock, CalendarCheck, TrendingUp, ArrowRight } from "lucide-react";
 
 export default function DashboardOverview(
   { onTasks, onPlanner }: { onTasks: () => void; onPlanner: () => void },
 ) {
   const { tasks, completions, preferences } = useWorkspace();
   const { mode } = useAuth();
+  const [creating, setCreating] = useState<"task" | "session" | null>(null);
+  const planButton = useRef<HTMLButtonElement>(null);
+  const createButton = useRef<HTMLButtonElement>(null);
   const now = new Date();
   const { open, completedToday, dueToday, completed, week, streak, completionRate } = metrics(tasks, completions, now);
   const priorities = dueToday.filter((task) => task.status !== "Completed");
@@ -21,69 +28,28 @@ export default function DashboardOverview(
 
   return (
     <section className="space-y-6">
-      {/* Welcome header */}
-      <div className="space-y-1">
-        <h2 className="text-xl font-semibold tracking-tight md:text-2xl">Your workspace at a glance</h2>
-        <p className="text-sm text-muted-foreground">
-          You have {priorities.length} {priorities.length === 1 ? "task" : "tasks"} due today
-          and {scheduled.length} planned work {scheduled.length === 1 ? "session" : "sessions"}.
-          {mode === "demo" && (
-            <Badge variant="outline" className="ml-2 text-xs font-normal">
-              Sample data · edits stay in this browser
-            </Badge>
-          )}
-        </p>
+      <div className="overview-banner flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5 text-white sm:p-7">
+        <div className="space-y-2">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Your workspace at a glance</h2>
+          <p className="text-sm text-teal-50">{priorities.length} open {priorities.length === 1 ? "task" : "tasks"} due today · {scheduled.length} planned {scheduled.length === 1 ? "session" : "sessions"}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {mode === "demo" && <span className="text-sm text-teal-50">Sample data · edits stay in this browser</span>}
+          <Button ref={createButton} variant="secondary" onClick={() => setCreating("task")}>
+            {tasks.length ? "Add task" : "Create your first task"}
+          </Button>
+        </div>
       </div>
-
-      {/* Summary cards */}
+      {creating && <TaskDialog task={null}
+        initialPlannedStart={creating === "session" ? today + "T" + preferences.preferred_work_hours.start : undefined}
+        onClose={() => setCreating(null)}
+        restoreFocus={() => (creating === "session" ? planButton : createButton).current?.focus()} />}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
-            <CardDescription className="text-xs font-medium">Due today</CardDescription>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="text-2xl font-bold">{dueToday.length}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
-            <CardDescription className="text-xs font-medium">Completed today</CardDescription>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="text-2xl font-bold">{completedToday}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
-            <CardDescription className="text-xs font-medium">Open tasks</CardDescription>
-            <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="text-2xl font-bold">{open}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
-            <CardDescription className="text-xs font-medium">Completion rate</CardDescription>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <p className="text-2xl font-bold">
-              {completionRate === null ? "—" : (completionRate * 100).toFixed(1) + "%"}
-            </p>
-            {streak > 0 && (
-              <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                <Flame className="h-3 w-3 text-orange-500" />
-                {streak}-day streak
-              </p>
-            )}
-          </CardContent>
-        </Card>
+        <StatCard label="Due today" value={priorities.length} icon={Clock} detail="Open deadlines" />
+        <StatCard label="Completed today" value={completedToday} icon={CheckCircle2} detail={streak ? `${streak}-day streak` : "Recorded activity"} />
+        <StatCard label="Open tasks" value={open} icon={CalendarCheck} detail="Across your workspace" />
+        <StatCard label="Completion rate" value={completionRate === null ? "—" : (completionRate * 100).toFixed(1) + "%"}
+          icon={TrendingUp} detail={`${completed} completed of ${tasks.length} total`} />
       </div>
 
       {/* Main two-column content */}
@@ -113,7 +79,7 @@ export default function DashboardOverview(
                               <Badge
                                 variant="outline"
                                 className="text-xs"
-                                style={{ borderColor: task.category.color, color: task.category.color }}
+                                style={{ borderLeft: `3px solid ${task.category.color}` }}
                               >
                                 {task.category.name}
                               </Badge>
@@ -164,7 +130,7 @@ export default function DashboardOverview(
                         <div className="min-w-0 flex-1">
                           <p className="font-medium leading-tight break-words">{task.title}</p>
                           {task.category && (
-                            <span className="text-xs" style={{ color: task.category.color }}>
+                            <span className="text-xs text-muted-foreground">
                               {task.category.name}
                             </span>
                           )}
@@ -174,8 +140,8 @@ export default function DashboardOverview(
                   })}
                 </ol>
               )}
-              <Button variant="outline" size="sm" onClick={onPlanner} className="w-full">
-                View daily planner <ArrowRight className="ml-1 h-3 w-3" />
+              <Button ref={planButton} variant="outline" size="sm" onClick={tasks.length ? onPlanner : () => setCreating("session")} className="w-full">
+                {tasks.length ? "View daily planner" : "Plan your first work session"} <ArrowRight className="ml-1 h-3 w-3" />
               </Button>
             </CardContent>
           </Card>
@@ -183,40 +149,7 @@ export default function DashboardOverview(
 
         {/* Right column */}
         <div className="space-y-4">
-          {/* Weekly productivity preview */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Weekly productivity</CardTitle>
-              <CardDescription>Completions this week, Monday through Sunday.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {week.map(({ date, completed: count }) => {
-                  const isToday = calendarDay(date) === today;
-                  const peak = Math.max(1, ...week.map((d) => d.completed));
-                  return (
-                    <div key={date.getTime()} className="flex items-center gap-3">
-                      <span className={`w-10 text-xs tabular-nums ${isToday ? "font-bold" : "text-muted-foreground"}`}>
-                        {date.toLocaleDateString(undefined, { weekday: "short" })}
-                      </span>
-                      <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-                        <div
-                          className={`h-full rounded-full transition-all ${isToday ? "bg-primary" : "bg-primary/60"}`}
-                          style={{ width: (count / peak * 100) + "%" }}
-                        />
-                      </div>
-                      <span className={`w-5 text-right text-xs tabular-nums ${isToday ? "font-bold" : "text-muted-foreground"}`}>
-                        {count}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="mt-3 text-xs text-muted-foreground">
-                {completed} completed of {tasks.length} total
-              </p>
-            </CardContent>
-          </Card>
+          <WeeklyActivity title="Weekly productivity" week={week} today={today} />
 
           {/* Recommendations */}
           <AIRecommendations onPlanner={onPlanner} />

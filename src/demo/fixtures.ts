@@ -11,9 +11,10 @@
 
 import type { Category, Task, TaskCompletion, UserPreferences } from "../types/database";
 import { scoreTask } from "../../supabase/functions/_shared/scoring";
+import { demoUserProfile } from "./users";
 import { calendarDay } from "../domain/calendar";
 
-const owner = "demo-user-ved-patel";
+const owner = demoUserProfile.id;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -80,44 +81,12 @@ function completionSlots(anchor: Date): Array<[number, number, number, number]> 
     [-7, 9, 30, 45], [-7, 14, 0, 30],
     // Day -8
     [-8, 10, 0, 55], [-8, 15, 0, 35],
-    // Day -9
-    [-9, 11, 30, 40], [-9, 16, 0, 25],
+    // Move two older sessions into today only after their morning cutoffs.
+    hour >= 10 ? [0, 8, 15, 42] : [-9, 11, 30, 42],
+    hour >= 11 ? [0, 9, 15, 38] : [-9, 16, 0, 38],
   ];
 
-  // Completions earlier today — only if anchor hour is late enough
-  if (hour >= 11) {
-    // Two completions this morning
-    history.push([0, 8, 15, 42], [0, 9, 15, 38]);
-  } else if (hour >= 10) {
-    // One early completion
-    history.push([0, 8, 15, 42]);
-  }
-  // If before 10 AM, no completions today — streak still counts via yesterday
-
   return history;
-}
-
-/**
- * Compute the streak based on the generated completion slots.
- * Mirrors the exact streak algorithm in src/domain/metrics.ts.
- */
-function expectedStreak(anchor: Date, slots: Array<[number, number, number, number]>): number {
-  const today = calendarDay(anchor);
-  const byDay = new Set<string>();
-  for (const [dayOffset, h, m] of slots) {
-    const d = new Date(anchor);
-    d.setDate(d.getDate() + dayOffset);
-    d.setHours(h, m, 0, 0);
-    byDay.add(calendarDay(d));
-  }
-  const cursor = new Date(anchor);
-  if (!byDay.has(today)) cursor.setDate(cursor.getDate() - 1);
-  let streak = 0;
-  while (byDay.has(calendarDay(cursor))) {
-    streak++;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,9 +114,10 @@ interface TaskDef {
 
 function openTaskDefs(anchor: Date): TaskDef[] {
   const h = anchor.getHours();
-  // Due-today tasks need deadlines that are still in the future.
-  const futureHour = (offset: number) => Math.min(h + offset, 23);
-  const futureMinute = (offset: number) => h + offset > 23 ? 59 : 0;
+  // Keep deadlines after the planned session. Late starts roll to tomorrow morning.
+  const deadline = (offset: number, sessionEnd: number) => h + offset > 23
+    ? { dueDayOffset: 1, dueHour: 9 }
+    : { dueDayOffset: 0, dueHour: Math.max(sessionEnd, h + offset) };
 
   return [
     // --- 4 tasks due today (open, due in the future relative to anchor) ---
@@ -155,7 +125,7 @@ function openTaskDefs(anchor: Date): TaskDef[] {
       title: "Sprint backlog review",
       description: "Prioritize sprint items and identify blockers with the engineering team.",
       category: "demo-cat-meetings", priority: "High", tags: ["sprint", "planning"],
-      durationMin: 60, dueDayOffset: 0, dueHour: futureHour(2), dueMinute: futureMinute(2),
+      durationMin: 60, ...deadline(2, 11),
       scheduledDayOffset: 0, scheduledHour: 9, scheduledMinute: 30,
       createdDayOffset: -4,
     },
@@ -163,7 +133,7 @@ function openTaskDefs(anchor: Date): TaskDef[] {
       title: "API error-handling audit",
       description: "Walk through recent error logs and identify unhandled failure modes.",
       category: "demo-cat-engineering", priority: "Medium", tags: ["api", "audit"],
-      durationMin: 60, dueDayOffset: 0, dueHour: futureHour(4), dueMinute: futureMinute(4),
+      durationMin: 60, ...deadline(4, 12),
       scheduledDayOffset: 0, scheduledHour: 11, scheduledMinute: 0,
       createdDayOffset: -5,
     },
@@ -171,7 +141,7 @@ function openTaskDefs(anchor: Date): TaskDef[] {
       title: "Release readiness checklist",
       description: "Walk through the checklist for the upcoming production deployment.",
       category: "demo-cat-operations", priority: "Critical", tags: ["release", "ops"],
-      durationMin: 90, dueDayOffset: 0, dueHour: futureHour(6), dueMinute: futureMinute(6),
+      durationMin: 90, ...deadline(6, 16),
       scheduledDayOffset: 0, scheduledHour: 14, scheduledMinute: 0,
       createdDayOffset: -3,
     },
@@ -179,7 +149,7 @@ function openTaskDefs(anchor: Date): TaskDef[] {
       title: "Release plan sign-off",
       description: "Review final milestones and confirm the deployment schedule with stakeholders.",
       category: "demo-cat-product", priority: "Critical", tags: ["release", "planning"],
-      durationMin: 60, dueDayOffset: 0, dueHour: futureHour(3), dueMinute: futureMinute(3),
+      durationMin: 60, ...deadline(3, 17),
       scheduledDayOffset: 0, scheduledHour: 16, scheduledMinute: 0,
       createdDayOffset: -6,
     },
@@ -417,7 +387,7 @@ function completedTaskDefs(): TaskDef[] {
       durationMin: 40, dueDayOffset: -4, dueHour: 11, createdDayOffset: -8,
     },
     {
-      title: "Sunday sprint preparation",
+      title: "Prepare the sprint handoff",
       description: "Reviewed upcoming week priorities and organized task categories.",
       category: "demo-cat-product", priority: "Medium", tags: ["planning"],
       durationMin: 35, dueDayOffset: -5, dueHour: 18, createdDayOffset: -6,
@@ -464,18 +434,6 @@ function completedTaskDefs(): TaskDef[] {
       category: "demo-cat-operations", priority: "Medium", tags: ["ci", "perf"],
       durationMin: 25, dueDayOffset: -9, dueHour: 16, createdDayOffset: -13,
     },
-    {
-      title: "Weekly architecture sync",
-      description: "Reviewed component boundaries and state-management patterns.",
-      category: "demo-cat-meetings", priority: "Medium", tags: ["architecture", "sync"],
-      durationMin: 45, dueDayOffset: -7, dueHour: 10, createdDayOffset: -10,
-    },
-    {
-      title: "Research accessibility testing tools",
-      description: "Evaluated axe-core, Lighthouse CI, and manual screen-reader workflows.",
-      category: "demo-cat-research", priority: "Low", tags: ["a11y", "tooling"],
-      durationMin: 60, dueDayOffset: -10, dueHour: 11, createdDayOffset: -14,
-    },
   ];
 }
 
@@ -487,23 +445,21 @@ function buildRecurringSeries(anchor: Date): {
   tasks: Task[];
   completions: TaskCompletion[];
 } {
-  const seriesId = "demo-series-arch-sync";
+  const seriesId = "1966895f-06d7-46ae-aab5-c524c037bc19";
   const tasks: Task[] = [];
   const completions: TaskCompletion[] = [];
-  const baseDefs: Array<{ dayOffset: number; completed: boolean; completionSlot?: [number, number, number] }> = [
-    { dayOffset: -14, completed: true, completionSlot: [10, 30, 50] },
-    { dayOffset: -7, completed: true, completionSlot: [10, 30, 45] },
-    { dayOffset: 7, completed: false },
-  ];
-  for (let i = 0; i < baseDefs.length; i++) {
-    const def = baseDefs[i];
+  // The next meeting is on a weekday, even when the workspace opens on Friday or Saturday.
+  const nextMeeting = [1, 1, 1, 1, 1, 3, 2][anchor.getDay()];
+  for (let i = 0; i < 5; i++) {
+    const day = nextMeeting + (i - 2) * 7;
+    const completedAt = i < 2 ? isoAt(anchor, day, 13, 30) : null;
     const task: Task = {
-      id: id("series-arch", i),
+      id: `f809586d-e252-47e6-96f4-00000000000${i}`,
       user_id: owner,
       title: "Weekly architecture sync",
       description: "Review component boundaries and discuss upcoming technical decisions.",
-      due_date: isoAt(anchor, def.dayOffset, 17, 0),
-      scheduled_start: !def.completed ? isoAt(anchor, def.dayOffset, 14, 0) : null,
+      due_date: isoAt(anchor, day, 17),
+      scheduled_start: isoAt(anchor, day, 12, 30),
       series_id: seriesId,
       occurrence_index: i,
       priority_level: "Medium",
@@ -513,25 +469,21 @@ function buildRecurringSeries(anchor: Date): {
       recurrence_type: "Weekly",
       recurrence_interval: 1,
       estimated_duration: 60,
-      status: def.completed ? "Completed" : "Pending",
-      completed_at: def.completed && def.completionSlot
-        ? isoAt(anchor, def.dayOffset, def.completionSlot[0], def.completionSlot[1])
-        : null,
+      status: completedAt ? "Completed" : "Pending",
+      completed_at: completedAt,
       ai_priority_score: 0,
       created_at: isoAt(anchor, -21, 9),
-      updated_at: def.completed && def.completionSlot
-        ? isoAt(anchor, def.dayOffset, def.completionSlot[0], def.completionSlot[1])
-        : isoAt(anchor, -1, 9),
+      updated_at: completedAt ?? isoAt(anchor, -1, 9),
     };
     tasks.push(task);
-    if (def.completed && def.completionSlot) {
+    if (completedAt) {
       completions.push({
         id: id("compl-series", i),
         user_id: owner,
         task_id: task.id,
-        completed_at: task.completed_at!,
-        completion_date: calendarDay(new Date(task.completed_at!)),
-        actual_duration: def.completionSlot[2],
+        completed_at: completedAt,
+        completion_date: calendarDay(new Date(completedAt)),
+        actual_duration: i === 0 ? 50 : 45,
       });
     }
   }
@@ -558,18 +510,13 @@ export function createDemoWorkspace(anchor: Date = new Date()): DemoStore {
   // ---- Completed tasks + their completion events ----
   const slots = completionSlots(anchor);
   const completedDefs = completedTaskDefs();
-  // We use as many completed tasks as we have completion slots.
-  // Both arrays are designed to have equal or compatible lengths.
-  const completedCount = Math.min(completedDefs.length, slots.length);
   const tasks: Task[] = [];
   const completions: TaskCompletion[] = [];
 
-  for (let i = 0; i < completedCount; i++) {
+  for (let i = 0; i < completedDefs.length; i++) {
     const def = completedDefs[i];
     const [cDay, cHour, cMin, cDuration] = slots[i];
     const completedAt = isoAt(anchor, cDay, cHour, cMin);
-    // Ensure completed_at is never in the future
-    if (Date.parse(completedAt) > now) continue;
 
     const task: Task = {
       id: id("task", i),
@@ -602,25 +549,12 @@ export function createDemoWorkspace(anchor: Date = new Date()): DemoStore {
 
   // ---- Recurring series ----
   const series = buildRecurringSeries(anchor);
-  // Filter out series completions that would be in the future
-  const validSeriesTasks: Task[] = [];
-  const validSeriesCompletions: TaskCompletion[] = [];
-  for (const t of series.tasks) {
-    if (t.completed_at && Date.parse(t.completed_at) > now) {
-      // Convert to pending if completion would be in the future
-      validSeriesTasks.push({ ...t, status: "Pending", completed_at: null });
-    } else {
-      validSeriesTasks.push(t);
-      const c = series.completions.find(c => c.task_id === t.id);
-      if (c) validSeriesCompletions.push(c);
-    }
-  }
-  tasks.push(...validSeriesTasks);
-  completions.push(...validSeriesCompletions);
+  tasks.push(...series.tasks);
+  completions.push(...series.completions);
 
   // ---- Open tasks ----
   const openDefs = openTaskDefs(anchor);
-  const startIdx = completedCount;
+  const startIdx = completedDefs.length;
   for (let i = 0; i < openDefs.length; i++) {
     const def = openDefs[i];
     const task: Task = {
@@ -670,9 +604,4 @@ export function createDemoWorkspace(anchor: Date = new Date()): DemoStore {
     user_preferences: [preferences],
     receipts: {},
   };
-}
-
-/** Compute the expected completion streak for the generated workspace. */
-export function computeExpectedStreak(anchor: Date): number {
-  return expectedStreak(anchor, completionSlots(anchor));
 }

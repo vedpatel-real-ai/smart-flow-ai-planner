@@ -17,7 +17,7 @@ export default function DailyPlanner() {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader>
+        <CardHeader className="rounded-lg border-l-4 border-primary bg-primary/5">
           <CardTitle>Daily Planner</CardTitle>
           <CardDescription>Place work on your calendar and keep track of deadlines.</CardDescription>
         </CardHeader>

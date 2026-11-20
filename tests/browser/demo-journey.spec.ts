@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { stat, checkWorkspace } from "./shared-ui";
+
 async function enterDemo(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "Explore Demo" }).click();
@@ -64,7 +66,9 @@ test.describe("Demo Mode visitor journey", () => {
 
   test("completing a task updates dashboard metrics", async ({ page }) => {
     await enterDemo(page);
-    // Read initial "Open tasks" value
+    await expect(stat(page, "Open tasks")).toHaveText("28");
+    await expect(stat(page, "Completion rate")).toHaveText("41.7%");
+    await expect(page.getByText("20 completed of 48 total")).toBeVisible();
     await page.getByRole("tab", { name: /Task Manager|^Tasks$/ }).click();
     // Find a pending task and complete it
     const completeBtn = page.getByRole("button", { name: /^Complete / }).first();
@@ -73,23 +77,33 @@ test.describe("Demo Mode visitor journey", () => {
     await completeBtn.click();
     // Wait for the toast
     await expect(page.getByText("Task completed", { exact: true })).toBeVisible();
-    // Go to analytics and verify completion history includes the task
+    await page.getByRole("tab", {name: /Overview|Home/}).click();
+    await expect(stat(page, "Open tasks")).toHaveText("27");
+    await expect(stat(page, "Completion rate")).toHaveText("43.8%");
+    await page.reload();
+    await expect(page.getByText("21 completed of 48 total")).toBeVisible();
     await page.getByRole("tab", { name: /Analytics|Stats/ }).click();
-    await expect(page.getByText(taskName, { exact: true }).first()).toBeVisible();
+    await expect(stat(page, "Completed")).toHaveText("21");
+    await expect(page.getByRole("list", { name: "Completion timeline" }).getByText(taskName, {exact:true})).toBeVisible();
+    const storedEvents = await page.evaluate(title => {
+      const store = JSON.parse(localStorage.getItem("smart-taskflow-demo-store")!);
+      const task = store.tasks.find((t: {title:string}) => t.title === title);
+      return store.task_completions.filter((e: {task_id:string}) => e.task_id === task.id);
+    }, taskName);
+    expect(storedEvents).toHaveLength(1);
   });
 
-  test("demo data persists after page reload", async ({ page }) => {
+  test("the exact edited title persists after reload", async ({ page }) => {
     await enterDemo(page);
-    await page.getByRole("tab", { name: /Task Manager|^Tasks$/ }).click();
-    const editBtns = page.getByRole("button", { name: /^Edit / });
-    const countBefore = await editBtns.count();
-    expect(countBefore).toBeGreaterThan(10);
-    // Reload
+    await page.getByRole("tab", {name: /Task Manager|^Tasks$/}).click();
+    await page.getByRole("button", {name:"Edit Sprint backlog review", exact:true}).click();
+    await page.getByLabel("Title", {exact:true}).fill("Edited sprint handoff");
+    await page.getByRole("button", {name:"Update Task", exact:true}).click();
+    const edited = page.getByRole("button", {name:"Edit Edited sprint handoff", exact:true});
+    await expect(edited).toBeVisible();
     await page.reload();
-    await expect(page.getByText("Demo · this browser")).toBeVisible();
-    await page.getByRole("tab", { name: /Task Manager|^Tasks$/ }).click();
-    const countAfter = await page.getByRole("button", { name: /^Edit / }).count();
-    expect(countAfter).toBe(countBefore);
+    await page.getByRole("tab", {name: /Task Manager|^Tasks$/}).click();
+    await expect(edited).toBeVisible();
   });
 
   test("reset demo replaces workspace with fresh sample", async ({ page }) => {
@@ -100,7 +114,9 @@ test.describe("Demo Mode visitor journey", () => {
     await page.getByLabel("Title", { exact: true }).fill("My custom task");
     await page.getByRole("button", { name: "Create Task", exact: true }).click();
     await expect(page.getByRole("button", { name: "Edit My custom task" })).toBeVisible();
-    // Reset
+    page.once("dialog", dialog => dialog.dismiss());
+    await page.getByRole("button", {name:"Reset demo"}).click();
+    await expect(page.getByRole("button", {name:"Edit My custom task"})).toBeVisible();
     page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "Reset demo" }).click();
     // After reset, custom task should be gone
@@ -108,7 +124,7 @@ test.describe("Demo Mode visitor journey", () => {
     await expect(page.getByRole("button", { name: "Edit My custom task" })).toHaveCount(0);
     // But demo tasks should be present
     const editBtns = page.getByRole("button", { name: /^Edit / });
-    expect(await editBtns.count()).toBeGreaterThan(10);
+    await expect(editBtns).toHaveCount(48);
   });
 });
 
@@ -129,3 +145,10 @@ for (const [width, height] of [[390, 844], [768, 1024], [1280, 900]]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }
+
+
+test("shared demo views pass accessibility checks and fit four viewport sizes", async ({page}, info) => {
+  test.setTimeout(120000);
+  await enterDemo(page);
+  await checkWorkspace(page, info);
+});

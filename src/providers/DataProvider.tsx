@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { getService, type PlannerService } from "./service";
 import { useAuth } from "@/hooks/useAuth";
 import { errorText } from "@/auth/session";
+import { demoStoreKey } from "./DemoProvider";
 import { Button } from "@/components/ui/button";
 
 type Snapshot = Awaited<ReturnType<PlannerService["snapshot"]>>;
@@ -36,13 +37,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const load = () => { void refresh().catch(() => { /* error is rendered below */ }); };
     load();
     const sync = (event: StorageEvent) => {
-      if (mode === "demo" && (!event.key || event.key === "smart-taskflow-demo-store")) load();
+      if (mode === "demo" && (!event.key || event.key === demoStoreKey)) load();
     };
     window.addEventListener("storage", sync);
     return () => { invalidate(); window.removeEventListener("storage", sync); };
   }, [mode, refresh, invalidate]);
-  if (error) return <section className="space-y-3"><p role="alert">Could not load this workspace. {error}</p>
+  if (error) return <section className="mx-auto max-w-xl space-y-3 rounded-xl border bg-card p-6"><h2 className="text-lg font-semibold">Could not load this workspace</h2><p role="alert">{error}</p>
     <Button variant="outline" onClick={() => { void refresh().catch(() => undefined); }}>Retry</Button></section>;
-  if (!snapshot) return <p role="status">Loading workspace…</p>;
+  if (!snapshot) return <p role="status" className="rounded-xl border bg-card p-6 text-muted-foreground">Loading workspace…</p>;
   return <WorkspaceContext.Provider value={{ ...snapshot, service, refresh }}>{children}</WorkspaceContext.Provider>;
 }

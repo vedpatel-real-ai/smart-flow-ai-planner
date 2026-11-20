@@ -2,7 +2,7 @@
 
 Smart Flow is a task planner for people who want to decide what to work on, reserve time for it and review what they finished. Try the shared sample workspace in your browser, or sign in to a Supabase workspace to save tasks across devices.
 
-[![Feature branch verification](https://github.com/vedpatel-real-ai/smart-flow-ai-planner/actions/workflows/verify.yml/badge.svg?branch=hardening%2Fapplication-reliability)](https://github.com/vedpatel-real-ai/smart-flow-ai-planner/actions/workflows/verify.yml)
+[![Main branch verification](https://github.com/vedpatel-real-ai/smart-flow-ai-planner/actions/workflows/verify.yml/badge.svg?branch=main)](https://github.com/vedpatel-real-ai/smart-flow-ai-planner/actions/workflows/verify.yml)
 
 ![Smart Flow overview showing today's tasks and recommendations](docs/images/overview.png)
 
@@ -46,7 +46,9 @@ React and TypeScript implement the workspace and forms. Radix UI provides dialog
 
 ## Demo and cloud workspaces
 
-**Demo** opens with a rich, realistic productivity workspace (48 synthetic tasks across 6 categories, multi-week completion history, active 5-day streak, scheduled working blocks, and explainable recommendations). All metrics and charts are dynamically computed from underlying records. Changes and the demo-entry flag survive a browser restart in `localStorage` version 2 with Web Locks concurrency protection on secure origins (with a single-tab fallback queue on unsupported contexts). Signing out keeps the sample workspace on that browser profile. **Reset demo** asks for confirmation before replacing it with a freshly anchored sample. An error boundary provides data export and reset recovery options. Clearing site data also clears the workspace. Demo access uses no credentials. [Demo workspace guide](docs/guides/DEMO_WORKSPACE.md)
+Both modes use the same dashboard, analytics, task manager and planner. A fresh **Demo** workspace opens with 48 synthetic tasks across six categories, including 20 completed tasks and 28 open tasks. Weekly activity, streaks, ranking and scheduled sessions come from workspace records. Web Locks protect browser-local edits across tabs. Export the saved workspace or use **Reset demo** to replace it after confirmation. [Demo workspace guide](docs/guides/DEMO_WORKSPACE.md)
+
+An empty **Cloud** account shows zero counts and an action to create a first task. Its charts update from the signed-in account’s records. [Empty Cloud workspace](docs/images/cloud-empty.png) · [Populated Cloud workspace](docs/images/cloud-overview.png) · [Cloud analytics](docs/images/cloud-analytics.png)
 
 **Cloud** requires `VITE_SUPABASE_URL` and a public `VITE_SUPABASE_PUBLISHABLE_KEY` or legacy anon key at build time. Sign in or register through the cloud form. The database migrations, Auth configuration and `task-priority` function must be available before inviting users. Local development uses a disposable Supabase project. [Deployment and upgrade guide](docs/guides/DEPLOYMENT.md)
 
@@ -66,7 +68,7 @@ Supabase authenticates cloud sessions. Row policies limit visibility, owner-qual
 
 ## Testing and evidence
 
-`npm run verify` runs static checks, the production build, unit tests and Edge checks. Database and browser verification also require native PostgreSQL test binaries, Docker and Chromium. CI runs the full set and exports JUnit, logs, exact revision, gate results and checksums. The workflow badge follows the feature branch. Each workflow run identifies the checkout it actually tested. [Verification guide](docs/verification/TEST_VERIFICATION.md) · [GitHub Actions runs](https://github.com/vedpatel-real-ai/smart-flow-ai-planner/actions/workflows/verify.yml)
+`npm run verify` runs static checks, the production build, unit tests and Edge checks. Database and browser verification also require native PostgreSQL test binaries, Docker and Chromium. CI runs the full set and exports JUnit, logs, exact revision, gate results and checksums. The workflow badge follows main. Each workflow run identifies the checkout it actually tested. [Verification guide](docs/verification/TEST_VERIFICATION.md) · [GitHub Actions runs](https://github.com/vedpatel-real-ai/smart-flow-ai-planner/actions/workflows/verify.yml)
 
 ## Technical FAQ
 

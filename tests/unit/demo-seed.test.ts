@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { createDemoWorkspace, computeExpectedStreak } from "../../src/demo/fixtures";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createDemoWorkspace } from "../../src/demo/fixtures";
 import { metrics, recommendations, statusAt } from "../../src/domain/metrics";
 import { bookedInterval, overlaps, calendarDay, plannerLists } from "../../src/domain/calendar";
 import {
@@ -10,8 +10,7 @@ import {
 } from "../../src/providers/contract";
 
 describe("Demo fixture generator", () => {
-  // Use a Thursday mid-morning in Asia/Kolkata as the standard reference
-  const anchor = new Date("2026-11-19T04:30:00.000Z"); // Thu 10:00 AM IST
+  const anchor = new Date(2026, 10, 19, 10);
 
   it("generates a coherent workspace with consistent relationships", () => {
     const store = createDemoWorkspace(anchor);
@@ -108,7 +107,7 @@ describe("Demo fixture generator", () => {
     // Some day should have completions (populated chart)
     expect(m.week.some((d) => d.completed > 0)).toBe(true);
     // Streak should match the expected computation
-    expect(m.streak).toBe(computeExpectedStreak(anchor));
+    expect(m.streak).toBe(10);
     expect(m.streak).toBeGreaterThan(0);
   });
 
@@ -151,44 +150,55 @@ describe("Demo fixture generator", () => {
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
   });
 
-  it("adapts to late-night anchors without future completions", () => {
-    // 11 PM on a Thursday
-    const lateNight = new Date("2026-11-19T17:30:00.000Z"); // Thu 23:00 IST
-    const store = createDemoWorkspace(lateNight);
-    const lateMs = lateNight.getTime();
-    for (const event of store.task_completions) {
-      expect(Date.parse(event.completed_at)).toBeLessThanOrEqual(lateMs);
-    }
-    // Should still produce a valid workspace
-    expect(store.tasks.length).toBeGreaterThan(20);
-    expect(store.task_completions.length).toBeGreaterThan(10);
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
   });
-
-  it("adapts to early-morning anchors", () => {
-    // 6 AM on a Thursday
-    const earlyMorning = new Date("2026-11-19T00:30:00.000Z"); // Thu 06:00 IST
-    const store = createDemoWorkspace(earlyMorning);
-    const earlyMs = earlyMorning.getTime();
-    for (const event of store.task_completions) {
-      expect(Date.parse(event.completed_at)).toBeLessThanOrEqual(earlyMs);
-    }
-    // No completions today (too early), but previous days should have data
-    const today = calendarDay(earlyMorning);
-    const todayCompletions = store.task_completions.filter((c) => c.completion_date === today);
-    expect(todayCompletions.length).toBe(0);
-  });
-
-  it("adapts to weekend anchors", () => {
-    // Saturday 10 AM IST
-    const weekend = new Date("2026-11-21T04:30:00.000Z");
-    const store = createDemoWorkspace(weekend);
-    expect(store.tasks.length).toBeGreaterThan(20);
-    // Should still have some completions
-    expect(store.task_completions.length).toBeGreaterThan(10);
-    // All completions in the past
-    for (const event of store.task_completions) {
-      expect(Date.parse(event.completed_at)).toBeLessThanOrEqual(weekend.getTime());
-    }
+  describe.each(["UTC", "Asia/Kolkata", "America/New_York"])("%s local calendar", (zone) => {
+    it.each([
+      "2026-03-08T00:00", "2026-03-08T06:00", "2026-10-31T10:00",
+      "2026-11-01T15:00", "2026-11-30T23:59:30", "2026-03-09T00:00",
+    ])("seeds exact counts and valid dates at %s", (time) => {
+      vi.stubEnv("TZ", zone);
+      const now = new Date(time);
+      vi.useFakeTimers().setSystemTime(now);
+      const { tasks, task_completions: events } = createDemoWorkspace();
+      const summary = metrics(tasks, events, now);
+      expect(tasks).toHaveLength(48);
+      expect(summary).toMatchObject({ open: 28, completed: 20, completionRate: 20 / 48 });
+      expect(events).toHaveLength(20);
+      expect(new Set(events.map(e => e.task_id)).size).toBe(20);
+      expect(tasks.filter(t => statusAt(t, now) === "Overdue")).toHaveLength(2);
+      const openDue = summary.dueToday.filter(t => t.status !== "Completed");
+      expect(openDue).toHaveLength(now.getHours() === 23 ? 0 : 4);
+      expect(summary.completedToday).toBe(Number(now.getHours() >= 10) + Number(now.getHours() >= 11));
+      expect(summary.week[0].date.getDay()).toBe(1);
+      expect(summary.week[6].date.getDay()).toBe(0);
+      expect(plannerLists(tasks, calendarDay(now)).backlog).toHaveLength(3);
+      const series = tasks.filter(t => t.series_id);
+      expect(series.map(t => t.occurrence_index)).toEqual([0, 1, 2, 3, 4]);
+      for (const [i, task] of series.entries()) {
+        const expected = new Date(series[0].scheduled_start!);
+        expected.setDate(expected.getDate() + 7 * i);
+        expect(task.scheduled_start).toBe(expected.toISOString());
+      }
+      const intervals = tasks.map(bookedInterval).filter(i => i !== null).sort((a, b) => a[0] - b[0]);
+      expect(intervals).toHaveLength(25);
+      intervals.forEach(([start, end], i) => {
+        expect(start).toBeLessThan(end);
+        if (i) expect(start).toBeGreaterThanOrEqual(intervals[i - 1][1]);
+      });
+      for (const task of tasks) {
+        expect(Date.parse(task.created_at)).toBeLessThanOrEqual(Date.parse(task.updated_at));
+        expect(Date.parse(task.updated_at)).toBeLessThanOrEqual(+now);
+      }
+      for (const event of events) {
+        const task = tasks.find(t => t.id === event.task_id)!;
+        expect(task.completed_at).toBe(event.completed_at);
+        expect(Date.parse(task.created_at)).toBeLessThanOrEqual(Date.parse(event.completed_at));
+        expect(event.completion_date).toBe(calendarDay(new Date(event.completed_at)));
+      }
+    });
   });
 
   it("includes a recurring series", () => {

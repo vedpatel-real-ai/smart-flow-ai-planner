@@ -2,16 +2,8 @@ import { useWorkspace } from "@/providers/DataProvider";
 import { metrics, statusAt } from "@/domain/metrics";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Cell,
-} from "recharts";
+import WeeklyActivity from "./WeeklyActivity";
+import StatCard from "./StatCard";
 import { calendarDay } from "@/domain/calendar";
 
 export default function Analytics() {
@@ -33,13 +25,6 @@ export default function Analytics() {
     { name: "Overdue", count: overdue, color: "#ef4444" },
   ];
 
-  // Weekly chart data
-  const weekData = week.map(({ date, completed: count }) => ({
-    day: date.toLocaleDateString(undefined, { weekday: "short" }),
-    completions: count,
-    isToday: calendarDay(date) === today,
-  }));
-
   // Category workload
   const names = new Map(categories.map((c) => [c.id, c]));
   const catCounts = new Map<string, { open: number; done: number }>();
@@ -51,7 +36,7 @@ export default function Analytics() {
     catCounts.set(key, entry);
   }
   const categoryData = [...catCounts].map(([id, { open, done }]) => ({
-    name: names.get(id)?.name ?? "Uncategorized",
+    id, name: names.get(id)?.name ?? "Uncategorized",
     color: names.get(id)?.color ?? "#6b7280",
     open,
     done,
@@ -80,62 +65,12 @@ export default function Analytics() {
       {/* Summary row */}
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
         {rows.map(([label, value]) => (
-          <Card key={label}>
-            <CardHeader className="p-4 pb-2">
-              <CardDescription className="text-xs">{label}</CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <p className="text-xl font-bold">{value}</p>
-            </CardContent>
-          </Card>
+          <StatCard key={label} label={label} value={value} />
         ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Weekly completions chart */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Weekly completions</CardTitle>
-            <CardDescription>
-              Completion events from Monday through Sunday, by local calendar date.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={weekData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis
-                  dataKey="day"
-                  tick={{ fontSize: 12 }}
-                  className="fill-muted-foreground"
-                />
-                <YAxis
-                  allowDecimals={false}
-                  tick={{ fontSize: 12 }}
-                  className="fill-muted-foreground"
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                    border: "1px solid hsl(var(--border))",
-                    backgroundColor: "hsl(var(--card))",
-                    color: "hsl(var(--foreground))",
-                  }}
-                />
-                <Bar dataKey="completions" radius={[4, 4, 0, 0]} maxBarSize={40}>
-                  {weekData.map((entry, index) => (
-                    <Cell
-                      key={index}
-                      fill={entry.isToday ? "hsl(var(--primary))" : "hsl(var(--primary) / 0.5)"}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
+        <WeeklyActivity title="Weekly completions" week={week} today={today} />
         {/* Task status distribution */}
         <Card>
           <CardHeader className="pb-3">
@@ -145,6 +80,7 @@ export default function Analytics() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {!tasks.length && <p className="text-sm text-muted-foreground">Your task breakdown will appear here after you create a task.</p>}
             {statusData.map((entry) => {
               const pct = tasks.length ? ((entry.count / tasks.length) * 100).toFixed(0) : "0";
               return (
@@ -188,7 +124,7 @@ export default function Analytics() {
               ? (
                 <div className="space-y-3">
                   {categoryData.map((cat) => (
-                    <div key={cat.name} className="space-y-1">
+                    <div key={cat.id} className="space-y-1">
                       <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center gap-2">
                           <span
@@ -236,7 +172,7 @@ export default function Analytics() {
           <CardContent>
             {completions.length
               ? (
-                <ol className="space-y-2.5 max-h-80 overflow-y-auto">
+                <ol tabIndex={0} aria-label="Completion timeline" className="space-y-3 max-h-80 overflow-y-auto border-l-2 border-primary/20 pl-4">
                   {[...completions].sort((a, b) => Date.parse(b.completed_at) - Date.parse(a.completed_at))
                     .slice(0, 20).map((event) => {
                       const task = titles.get(event.task_id);
@@ -259,7 +195,7 @@ export default function Analytics() {
                                 <Badge
                                   variant="outline"
                                   className="text-xs"
-                                  style={{ borderColor: task.category.color, color: task.category.color }}
+                                  style={{ borderLeft: `3px solid ${task.category.color}` }}
                                 >
                                   {task.category.name}
                                 </Badge>

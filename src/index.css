@@ -8,7 +8,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 165 20% 97%;
     --foreground: 222.2 84% 4.9%;
 
     --card: 0 0% 100%;
@@ -17,7 +17,7 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 216 100% 50%;
+    --primary: 174 78% 24%;
     --primary-foreground: 210 40% 98%;
     --primary-glow: 216 100% 60%;
 
@@ -38,7 +38,7 @@ All colors MUST be HSL.
     --gradient-glow: linear-gradient(135deg, hsl(216 100% 50% / 0.1), hsl(195 100% 50% / 0.1));
 
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 210 16% 37%;
 
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
@@ -151,4 +151,7 @@ All colors MUST be HSL.
   .mobile-responsive {
     @apply flex flex-col sm:flex-row sm:items-center gap-4;
   }
+}
+.overview-banner {
+  background: linear-gradient(105deg, #123d46, #14685f);
 }

@@ -80,16 +80,9 @@ function upgrade(store: Store) {
   rank(store.tasks);
 }
 
-function seeded(): Store {
-  const store: Store = structuredClone(createDemoWorkspace());
-  // Re-rank with live clock so scores reflect the actual current time
-  rank(store.tasks);
-  return store;
-}
-
 function read(storage: Storage): { store: Store; migrated: boolean } {
   const raw = storage.getItem(demoStoreKey);
-  if (raw === null) return { store: seeded(), migrated: true };
+  if (raw === null) return { store: createDemoWorkspace(), migrated: true };
   let parsed;
   try {
     parsed = JSON.parse(raw);
@@ -117,20 +110,11 @@ const browserLock: Exclusive = async (fn) => {
   if (globalThis.navigator?.locks) {
     return navigator.locks.request(demoStoreKey, fn);
   }
-  // Web Locks unavailable (insecure origin or unsupported browser).
-  // Fall back to tab-local sequential execution. This does NOT provide
-  // cross-tab synchronization — only single-tab crash prevention.
-  if (typeof console !== "undefined") {
-    console.warn(
-      "[DemoProvider] Web Locks unavailable in this environment (insecure origin or unsupported browser). " +
-      "Cross-tab coordination is disabled; writes are serialized within this tab only."
-    );
-  }
-  return fn();
+  throw new Error("Demo requires Web Locks to protect edits across tabs. Open this site over HTTPS or localhost in a browser with Web Locks support.");
 };
 
 export async function resetDemo(storage = localStorage, exclusive: Exclusive = browserLock) {
-  await exclusive(() => storage.setItem(demoStoreKey, JSON.stringify(seeded())));
+  await exclusive(() => storage.setItem(demoStoreKey, JSON.stringify(createDemoWorkspace())));
 }
 
 export function demoService(

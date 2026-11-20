@@ -84,3 +84,27 @@ describe("Demo workspace", () => {
     expect(storage.getItem(demoStoreKey)).toBe("{}");
   });
 });
+
+it("reopens a customized version 2 store without changing its saved bytes", async () => {
+  const storage = new MemoryStorage();
+  const service = demoService(owner, storage, exclusive);
+  const initial = await service.snapshot();
+  const task = newTask(owner, "Custom review", {
+    category_id: initial.categories[0].id,
+    scheduled_start: "2034-05-03T09:00:00Z",
+    due_date: "2034-05-04T17:00:00Z",
+  });
+  await service.create([task]);
+  await service.complete(task.id);
+  await service.setSuggestions(false);
+  const raw = storage.getItem(demoStoreKey)!;
+  expect(JSON.parse(raw).version).toBe(2);
+  const reopened = await demoService(owner, storage, exclusive).snapshot();
+  expect(reopened.tasks.find(t => t.id === task.id)).toMatchObject({
+    title: task.title, scheduled_start: task.scheduled_start, due_date: task.due_date,
+    status: "Completed", category_id: task.category_id,
+  });
+  expect(reopened.completions.filter(e => e.task_id === task.id)).toHaveLength(1);
+  expect(reopened.preferences.ai_suggestions_enabled).toBe(false);
+  expect(storage.getItem(demoStoreKey)).toBe(raw);
+});
