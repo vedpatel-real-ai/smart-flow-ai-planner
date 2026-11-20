@@ -1,0 +1,11 @@
+# Application architecture
+
+The entry screen offers a browser demo and, on configured installations, cloud authentication. A session controller owns the selected identity, storage destination and lifecycle. React subscribes to that controller. An operation generation prevents an old asynchronous result from replacing a newer identity. Signing out unsubscribes the active listener and reports failures. [Session controller](../../src/auth/session.ts) · [Auth SDK adapter](../../src/integrations/supabase/client.ts)
+
+Each active identity mounts its own workspace subtree. The service factory receives the mode and owner from that identity. It chooses a Demo or Supabase adapter and loads tasks, categories, preferences and history. The workspace tracks read revisions, so a late read cannot overwrite a more recent one. An unsuccessful read exposes a retry. Database reads use stable ID pagination. [Workspace provider](../../src/providers/DataProvider.tsx) · [Service contract](../../src/providers/contract.ts)
+
+The task editor validates dates and produces a bounded batch with stable IDs. The adapter commits it, updates the ranking, and the view reloads its snapshot. Completion uses its own domain operation. A warning after a committed update distinguishes ranking failure from a task write failure. [Editor](../../src/components/TaskDialog.tsx) · [Mutation feedback](../../src/components/usePlannerAction.ts)
+
+The planner and analytics consume the same snapshot as the task manager. The planner projects each scheduled interval onto the selected day. Analytics groups actual completion events by local calendar day. Suggestions are a separate deterministic view of open tasks and workspace preferences. [Calendar](../../src/domain/calendar.ts) · [Metrics](../../src/domain/metrics.ts)
+
+Demo operations lock the origin-local store, validate a copy and persist one JSON value. A corrupt store reports an error and remains available for recovery. The cloud adapter uses the signed-in SDK for row-scoped reads, mutations and function calls. The scoring handler forwards the user token and commits score changes with version checks. [Demo adapter](../../src/providers/DemoProvider.ts) · [Cloud adapter](../../src/providers/SupabaseProvider.ts) · [Ranking](RECOMMENDATIONS.md) · [PostgreSQL](DATA_MODEL.md)

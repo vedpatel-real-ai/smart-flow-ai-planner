@@ -1,126 +1,79 @@
-import { Task } from "@/types/database";
+import { CheckCircle, Edit, Trash2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, AlertTriangle, Edit, Trash2, Calendar } from "lucide-react";
-import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import type { Task, TaskStatus } from "@/types/database";
 
-interface TaskCardProps {
+interface Props {
   task: Task;
-  onComplete: (taskId: string) => void;
-  onEdit: (task: Task) => void;
-  onDelete: (taskId: string) => void;
+  status: TaskStatus;
+  busy: boolean;
+  onEdit: () => void;
+  onComplete: () => void;
+  onDelete: () => void;
 }
 
-const TaskCard = ({ task, onComplete, onEdit, onDelete }: TaskCardProps) => {
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Completed':
-        return <CheckCircle className="h-4 w-4 text-success" />;
-      case 'Overdue':
-        return <AlertTriangle className="h-4 w-4 text-critical" />;
-      default:
-        return <Clock className="h-4 w-4 text-warning" />;
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'Critical':
-        return 'bg-critical/10 text-critical border-critical/20';
-      case 'High':
-        return 'bg-warning/10 text-warning border-warning/20';
-      case 'Medium':
-        return 'bg-primary/10 text-primary border-primary/20';
-      default:
-        return 'bg-muted/10 text-muted-foreground border-muted/20';
-    }
-  };
-
+export default function TaskCard({ task, status, busy, onEdit, onComplete, onDelete }: Props) {
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center space-x-2">
-              {getStatusIcon(task.status)}
-              <h3 className={`font-medium ${task.status === 'Completed' ? 'line-through text-muted-foreground' : ''}`}>
-                {task.title}
-              </h3>
-              <Badge className={getPriorityColor(task.priority_level)}>
-                {task.priority_level}
-              </Badge>
-              {task.ai_priority_score > 0 && (
-                <Badge variant="outline">
-                  AI: {task.ai_priority_score.toFixed(1)}
-                </Badge>
-              )}
-            </div>
-            
-            {task.description && (
-              <p className="text-sm text-muted-foreground">{task.description}</p>
-            )}
-            
-            <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-              {task.due_date && (
-                <div className="flex items-center space-x-1">
-                  <Calendar className="h-3 w-3" />
-                  <span>{format(new Date(task.due_date), 'MMM d, yyyy')}</span>
-                </div>
-              )}
-              {task.estimated_duration && (
-                <div className="flex items-center space-x-1">
-                  <Clock className="h-3 w-3" />
-                  <span>{task.estimated_duration}m</span>
-                </div>
-              )}
-              {task.category && (
-                <Badge variant="outline" style={{ backgroundColor: `${task.category.color}20` }}>
-                  {task.category.name}
-                </Badge>
-              )}
-            </div>
-            
-            {task.tags && task.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {task.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
+    <Card>
+      <CardContent className="flex flex-wrap items-start justify-between gap-3 p-4">
+        <div className="min-w-0 flex-1 basis-60 space-y-2 break-words">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className={status === "Completed" ? "font-medium line-through" : "font-medium"}>
+              {task.title}
+            </h3>
+            <Badge variant="secondary">{task.priority_level}</Badge>
+            <Badge variant="outline">{status}</Badge>
+            {status !== "Completed" && (
+              <Badge variant="outline">Score {task.ai_priority_score.toFixed(1)}</Badge>
             )}
           </div>
-          
-          <div className="flex items-center space-x-2 ml-4">
-            {task.status !== 'Completed' && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onComplete(task.id)}
-              >
-                <CheckCircle className="h-4 w-4" />
-              </Button>
+          {task.description && (
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task.description}</p>
+          )}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            {task.due_date && <span>Due {new Date(task.due_date).toLocaleString()}</span>}
+            {task.scheduled_start && (
+              <span>Planned {new Date(task.scheduled_start).toLocaleString()}</span>
             )}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onEdit(task)}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onDelete(task.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            {task.estimated_duration && <span>{task.estimated_duration} min</span>}
+            {task.category && <span>{task.category.name}</span>}
+            {task.series_id && <span>Series occurrence {(task.occurrence_index ?? 0) + 1}</span>}
           </div>
+          {!!task.tags?.length && <p className="text-sm">{task.tags.join(" · ")}</p>}
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {status !== "Completed" && (
+            <Button
+              variant="outline"
+              className="h-11 w-11 p-0"
+              aria-label={`Complete ${task.title}`}
+              disabled={busy}
+              onClick={onComplete}
+            >
+              <CheckCircle size={16} />
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            className="h-11 w-11 p-0"
+            aria-label={`Edit ${task.title}`}
+            disabled={busy}
+            onClick={onEdit}
+          >
+            <Edit size={16} />
+          </Button>
+          <Button
+            variant="outline"
+            className="h-11 w-11 p-0"
+            aria-label={`Delete ${task.title}`}
+            disabled={busy}
+            onClick={onDelete}
+          >
+            <Trash2 size={16} />
+          </Button>
         </div>
       </CardContent>
     </Card>
   );
-};
-
-export default TaskCard;
+}

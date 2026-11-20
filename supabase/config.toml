@@ -1,1 +1,33 @@
-project_id = "smart-flow-ai-planner"
+project_id = "smart-flow-verify"
+
+[api]
+port = 57421
+
+[db]
+port = 57422
+shadow_port = 57420
+major_version = 17
+
+[studio]
+enabled = false
+port = 57423
+
+[inbucket]
+enabled = false
+port = 57424
+
+[analytics]
+enabled = false
+port = 57427
+
+[auth]
+site_url = "http://localhost:8080"
+
+[auth.email]
+enable_confirmations = false
+
+[edge_runtime]
+inspector_port = 57428
+
+[db.pooler]
+port = 57429

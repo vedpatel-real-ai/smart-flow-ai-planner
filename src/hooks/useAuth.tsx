@@ -1,123 +1,32 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { User, Session } from "@supabase/supabase-js";
-import { demoSession, demoUser } from "@/demo/auth";
-import { forceDemoMode, getActiveDataProvider } from "@/providers/DataProvider";
+import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
+import { SessionController } from "@/auth/session";
+import { cloudAuth } from "@/integrations/supabase/client";
+import { demoUser } from "@/demo/auth";
 
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, displayName?: string) => Promise<{ error: any }>;
-  signOut: () => Promise<void>;
+const AuthContext = createContext<SessionController | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [controller] = useState(() => new SessionController({
+    getItem: key => window.localStorage.getItem(key),
+    setItem: (key, value) => window.localStorage.setItem(key, value),
+    removeItem: key => window.localStorage.removeItem(key),
+  }, cloudAuth, demoUser));
+  useEffect(() => {
+    void controller.start();
+    const sync = (event: StorageEvent) => {
+      if (!event.key || event.key === "smart-taskflow-backend-mode" || event.key === "smart-taskflow-demo-authenticated") void controller.start();
+    };
+    window.addEventListener("storage", sync);
+    return () => { window.removeEventListener("storage", sync); controller.stop(); };
+  }, [controller]);
+  return <AuthContext.Provider value={controller}>{children}</AuthContext.Provider>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
-
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const provider = getActiveDataProvider();
-
-    const { data: { subscription } } = provider.auth.onAuthStateChange(
-      (_event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    provider.auth.getSession()
-      .then(({ data: { session: initialSession } }) => {
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
-        setLoading(false);
-      })
-      .catch(() => {
-        setSession(null);
-        setUser(null);
-        setLoading(false);
-      });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { error, data } = await getActiveDataProvider().auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      if (data?.session) {
-        setSession(data.session);
-        setUser(data.user);
-      }
-      return { error: null };
-    } catch {
-      forceDemoMode();
-      const { data } = await getActiveDataProvider().auth.signInWithPassword({ email, password });
-      setSession(data?.session || demoSession);
-      setUser(data?.user || demoUser);
-      return { error: null };
-    }
-  };
-
-  const signUp = async (email: string, password: string, displayName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    try {
-      const { error, data } = await getActiveDataProvider().auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            display_name: displayName || email.split('@')[0]
-          }
-        }
-      });
-      if (error) throw error;
-      if (data?.session) {
-        setSession(data.session);
-        setUser(data.user);
-      }
-      return { error: null };
-    } catch {
-      forceDemoMode();
-      const { data } = await getActiveDataProvider().auth.signUp({ email, password });
-      setSession(data?.session || demoSession);
-      setUser(data?.user || demoUser);
-      return { error: null };
-    }
-  };
-
-  const signOut = async () => {
-    await getActiveDataProvider().auth.signOut();
-    setSession(null);
-    setUser(null);
-  };
-
-  const value = {
-    user,
-    session,
-    loading,
-    signIn,
-    signUp,
-    signOut,
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+export function useAuth() {
+  const controller = useContext(AuthContext);
+  if (!controller) throw new Error("Missing session context");
+  const state = useSyncExternalStore(controller.subscribe, controller.snapshot);
+  const active = state.kind === "active" || state.kind === "signing-out" ? state : null;
+  return { state, user: active?.user, mode: active?.mode, authenticate: controller.authenticate,
+    signOut: controller.signOut, enterDemo: controller.enterDemo, restore: controller.start };
+}

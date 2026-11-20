@@ -1,3 +1,21 @@
+-- Early releases used a hyphen after the version. CLI versions that ignored
+-- that filename installed only the later standalone bootstrap. On that known
+-- shape the common tables already exist; the forward migration reconciles them.
+do $bootstrap$
+begin
+  if to_regclass('public.profiles') is not null then
+    if to_regclass('public.time_blocks') is not null
+       and to_regclass('public.tasks') is not null
+       and to_regclass('public.categories') is not null
+       and to_regclass('public.task_completions') is not null
+       and to_regclass('public.user_preferences') is not null
+       and exists(select from information_schema.columns where table_schema='public' and table_name='tasks'
+                  and column_name='priority_level' and udt_name='text') then
+      return;
+    end if;
+    raise exception 'Unrecognized existing planner schema; inspect the migration ledger before upgrading';
+  end if;
+
 -- Create user profiles table
 CREATE TABLE public.profiles (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -188,3 +206,4 @@ CREATE INDEX idx_tasks_due_date ON public.tasks(due_date);
 CREATE INDEX idx_tasks_priority ON public.tasks(priority_level);
 CREATE INDEX idx_task_completions_user_date ON public.task_completions(user_id, completion_date);
 CREATE INDEX idx_categories_user_id ON public.categories(user_id);
+end $bootstrap$;

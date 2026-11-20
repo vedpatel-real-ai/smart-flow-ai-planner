@@ -15,7 +15,7 @@ const Dashboard = () => {
         <div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h2>
           <p className="text-muted-foreground text-sm md:text-base">
-            Manage your tasks and optimize your productivity with AI
+            Review your tasks, deadlines and planned work.
           </p>
         </div>
       </div>
@@ -45,7 +45,7 @@ const Dashboard = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <DashboardOverview />
+          <DashboardOverview onTasks={() => setActiveTab("tasks")} onPlanner={() => setActiveTab("planner")} />
         </TabsContent>
 
         <TabsContent value="tasks">

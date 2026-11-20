@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   public: {
     Tables: {
       categories: {
@@ -93,10 +88,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "task_completions_task_id_fkey"
-            columns: ["task_id"]
+            columns: ["user_id", "task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id", "id"]
           },
         ]
       }
@@ -111,11 +106,14 @@ export type Database = {
           estimated_duration: number | null
           id: string
           is_recurring: boolean
+          occurrence_index: number | null
           parent_task_id: string | null
-          priority_level: string
+          priority_level: Database["public"]["Enums"]["priority_level"]
           recurrence_interval: number | null
-          recurrence_type: string | null
-          status: string
+          recurrence_type: Database["public"]["Enums"]["recurrence_type"] | null
+          scheduled_start: string | null
+          series_id: string | null
+          status: Database["public"]["Enums"]["task_status"]
           tags: string[] | null
           title: string
           updated_at: string
@@ -131,11 +129,16 @@ export type Database = {
           estimated_duration?: number | null
           id?: string
           is_recurring?: boolean
+          occurrence_index?: number | null
           parent_task_id?: string | null
-          priority_level?: string
+          priority_level?: Database["public"]["Enums"]["priority_level"]
           recurrence_interval?: number | null
-          recurrence_type?: string | null
-          status?: string
+          recurrence_type?:
+            | Database["public"]["Enums"]["recurrence_type"]
+            | null
+          scheduled_start?: string | null
+          series_id?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
           tags?: string[] | null
           title: string
           updated_at?: string
@@ -151,11 +154,16 @@ export type Database = {
           estimated_duration?: number | null
           id?: string
           is_recurring?: boolean
+          occurrence_index?: number | null
           parent_task_id?: string | null
-          priority_level?: string
+          priority_level?: Database["public"]["Enums"]["priority_level"]
           recurrence_interval?: number | null
-          recurrence_type?: string | null
-          status?: string
+          recurrence_type?:
+            | Database["public"]["Enums"]["recurrence_type"]
+            | null
+          scheduled_start?: string | null
+          series_id?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
           tags?: string[] | null
           title?: string
           updated_at?: string
@@ -164,17 +172,17 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "tasks_category_id_fkey"
-            columns: ["category_id"]
+            columns: ["user_id", "category_id"]
             isOneToOne: false
             referencedRelation: "categories"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id", "id"]
           },
           {
             foreignKeyName: "tasks_parent_task_id_fkey"
-            columns: ["parent_task_id"]
+            columns: ["user_id", "parent_task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id", "id"]
           },
         ]
       }
@@ -209,10 +217,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "time_blocks_task_id_fkey"
-            columns: ["task_id"]
+            columns: ["user_id", "task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id", "id"]
           },
         ]
       }
@@ -251,10 +259,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      complete_task: { Args: { p_task_id: string }; Returns: string }
+      create_task_batch: { Args: { p_tasks: Json }; Returns: string[] }
+      persist_task_scores: { Args: { p_scores: Json }; Returns: number }
     }
     Enums: {
-      [_ in never]: never
+      priority_level: "Low" | "Medium" | "High" | "Critical"
+      recurrence_type: "Daily" | "Weekly" | "Monthly" | "Custom"
+      task_status: "Pending" | "Completed" | "Overdue"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -381,6 +393,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      priority_level: ["Low", "Medium", "High", "Critical"],
+      recurrence_type: ["Daily", "Weekly", "Monthly", "Custom"],
+      task_status: ["Pending", "Completed", "Overdue"],
+    },
   },
 } as const

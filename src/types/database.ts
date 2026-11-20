@@ -6,19 +6,22 @@ export interface Task {
   id: string;
   user_id: string;
   title: string;
-  description?: string;
-  due_date?: string;
+  description?: string | null;
+  due_date?: string | null;
+  scheduled_start?: string | null;
+  series_id?: string | null;
+  occurrence_index?: number | null;
   priority_level: PriorityLevel;
-  category_id?: string;
-  tags?: string[];
+  category_id?: string | null;
+  tags?: string[] | null;
   is_recurring: boolean;
-  recurrence_type?: RecurrenceType;
-  recurrence_interval?: number;
-  estimated_duration?: number;
+  recurrence_type?: RecurrenceType | null;
+  recurrence_interval?: number | null;
+  estimated_duration?: number | null;
   status: TaskStatus;
-  completed_at?: string;
+  completed_at?: string | null;
   ai_priority_score: number;
-  parent_task_id?: string;
+  parent_task_id?: string | null;
   created_at: string;
   updated_at: string;
   category?: Category;
@@ -38,7 +41,7 @@ export interface TaskCompletion {
   user_id: string;
   task_id: string;
   completed_at: string;
-  actual_duration?: number;
+  actual_duration?: number | null;
   completion_date: string;
 }
 

@@ -1,0 +1,63 @@
+name: Verify Smart Flow
+on:
+  pull_request:
+  push:
+    branches: [main, 'hardening/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.6
+      - name: Install locked dependencies
+        run: python3 scripts/evidence.py install npm ci --no-audit --no-fund
+      - name: TypeScript
+        run: python3 scripts/evidence.py types npm run typecheck
+      - name: ESLint
+        run: python3 scripts/evidence.py lint npm run lint
+      - name: Production bundle
+        run: python3 scripts/evidence.py build npm run build
+      - name: Unit and demo contract
+        run: python3 scripts/evidence.py unit npm test -- --reporter=default --reporter=junit --outputFile.junit=verification-output/unit.xml
+      - name: Edge types and HTTP behavior
+        run: |
+          python3 scripts/evidence.py edge-types npm run check:edge
+          python3 scripts/evidence.py edge deno test --junit-path=verification-output/edge.xml supabase/functions/task-priority/handler_test.ts
+      - name: Historical schemas and database integrity
+        run: python3 scripts/evidence.py database node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=verification-output/database.xml tests/database/planning.test.mjs
+      - name: Start disposable Supabase
+        run: python3 scripts/evidence.py local-start npx --no-install supabase start -x realtime,storage-api,imgproxy,studio,mailpit,logflare,vector,supavisor
+      - name: Fresh migration reset
+        run: python3 scripts/evidence.py migration-reset npx --no-install supabase db reset --local
+      - name: Generated database types
+        run: python3 scripts/evidence.py schema-types node scripts/verify-types.mjs
+      - name: Authenticated integration and ownership
+        run: python3 scripts/evidence.py integration node scripts/with-local-stack.mjs npm run test:integration -- --reporter=default --reporter=junit --outputFile.junit=verification-output/integration.xml
+      - name: Install Chromium
+        run: python3 scripts/evidence.py browser-install npx --no-install playwright install --with-deps chromium
+      - name: Browser workflows
+        run: python3 scripts/evidence.py browser node scripts/with-local-stack.mjs npm run test:e2e
+      - name: Record results
+        if: always()
+        run: python3 scripts/evidence.py summary
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-${{ github.sha }}
+          path: verification-output/
+          retention-days: 30
